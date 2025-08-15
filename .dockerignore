@@ -1,0 +1,29 @@
+
+# Python cache and temp files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.sqlite3
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+# OS files
+.DS_Store
+Thumbs.db
+# Docker and build files
+Dockerfile
+docker-compose.yml
+.env
+# Node and frontend files
+node_modules/
+dist/
+build/
+npm-debug.log
+.git/
+.gitignore
+# Video temp files
+/tmp/
