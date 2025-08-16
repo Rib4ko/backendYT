@@ -87,6 +87,7 @@ def create_clip_task(url, start, end):
             'format': 'bestvideo[height<=1080]+bestaudio/best',  # Max resolution 1080p
             'merge_output_format': 'mp4',
             'noplaylist': True,  # Prevent downloading playlists if URL is a playlist
+            cookies': './cookies (1).txt',  # Add this line
         }
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(str(url), download=True)
