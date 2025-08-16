@@ -1,13 +1,14 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks
 from pydantic import BaseModel, HttpUrl, field_validator, model_validator
 import yt_dlp
 import ffmpeg
 import os
 import logging
+import time
 import shutil
 from fastapi.responses import FileResponse, JSONResponse
-from fastapi import BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+import threading
 
 
 # Setup logging
@@ -26,12 +27,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # File paths
 TEMP_DIR = "/tmp/yt_clips/"
 os.makedirs(TEMP_DIR, exist_ok=True)
 
-
+# Path to the cookies file in the same directory as app.py
+COOKIES_FILE = os.path.join(os.path.dirname(__file__), "cookies.txt")
 
 # Pydantic v2 validation
 class ClipRequest(BaseModel):
@@ -83,12 +84,13 @@ def create_clip_task(url, start, end):
 
         # Download the video using yt-dlp (limit to max 1080p)
         ydl_opts = {
-            'outtmpl': f'{TEMP_DIR}%(id)s.%(ext)s',
+            'outtmpl': f'{TEMP_DIR}%(id)s.%(ext)s',  # Output template
             'format': 'bestvideo[height<=1080]+bestaudio/best',  # Max resolution 1080p
             'merge_output_format': 'mp4',
             'noplaylist': True,  # Prevent downloading playlists if URL is a playlist
-            cookies': './cookies (1).txt',  # Add this line
+            'cookies': COOKIES_FILE,  # Pass the cookies file for authentication
         }
+
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(str(url), download=True)
             downloaded_path = ydl.prepare_filename(info_dict)
@@ -113,7 +115,7 @@ def create_clip_task(url, start, end):
                 acodec='aac',
                 video_bitrate='3000k',  # Higher video bitrate
                 audio_bitrate='192k',   # Higher audio bitrate
-                preset='medium',          # Better compression/quality
+                preset='medium',        # Better compression/quality
                 crf=18                  # Visually lossless (lower is better)
             )
             .run(overwrite_output=True)
@@ -148,8 +150,6 @@ def create_clip_task(url, start, end):
             except Exception as cleanup_err:
                 logger.warning(f"Failed to delete temp file: {downloaded_path} ({cleanup_err})")
 
-import time
-import threading
 
 @app.get("/download/{filename}")
 async def download_clip(filename: str, background_tasks: BackgroundTasks):
